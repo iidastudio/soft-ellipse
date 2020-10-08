@@ -19,9 +19,9 @@
   ],
   "uiEntryPoints": [
     {
-      "type": "menu",
+      "type": "panel",
       "label": "Soft Ellipse",
-      "commandId": "softellipse"
+      "panelId": "softellipse"
     }
   ]
 }
