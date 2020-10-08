@@ -1,5 +1,5 @@
-const { Path, Color } = require("scenegraph");
-const { appLanguage } = require("application");
+const { Ellipse, Rectangle } = require("scenegraph");
+const { editDocument, appLanguage } = require("application");
 const commands = require("commands");
 // const strings = require("./strings.json");
 // const supportedLanguages = require("./manifest.json").languages;
@@ -7,61 +7,149 @@ const commands = require("commands");
 //     ? appLanguage
 //     : supportedLanguages[0];
 
+let panel;
 
-const softFn = (selection) => {
-  
-  commands.convertToPath();
-
-  selection.items.forEach((item) => {
-    //   [0] "m",  "mx",   "my",
-    //   [3] "c1", "c1x1", "c1y1", "c1x2", "c1y2", "c1x", "c1y",
-    //   [10]"c2", "c2x1", "c2y1", "c2x2", "c2y2", "c2x", "c2y",
-    //   [17]"c3", "c3x1", "c3y1", "c3x2", "c3y2", "c3x", "c3y",
-    //   [24]"c4", "c4x1", "c4y1", "c4x2", "c4y2", "c4x", "c4y",
-    //   [31]"z"
-
-    const splitData = item.pathData.split(" ");
-    if (
-      splitData[3] == "C" &&
-      splitData[10] == "C" &&
-      splitData[17] == "C" &&
-      splitData[24] == "C" &&
-      splitData[31] == "Z"
-    ) {
-      const rateOfChange = 0.8;
-      const leftHorizontal =
-        item.localBounds.width - item.localBounds.height * rateOfChange;
-      const rightHorizontal = item.localBounds.width * rateOfChange;
-      const topVertical =
-        item.localBounds.width - item.localBounds.height * rateOfChange;
-      const bottomVertical = item.localBounds.width * rateOfChange;
-
-      splitData[27] = leftHorizontal;
-      splitData[4] = rightHorizontal;
-      splitData[13] = rightHorizontal;
-      splitData[18] = leftHorizontal;
-      splitData[7] = topVertical;
-      splitData[12] = bottomVertical;
-      splitData[21] = bottomVertical;
-      splitData[26] = topVertical;
-
-      const chengedData = splitData.join(" ");
-
-      item.pathData = chengedData;
-
-      // const path = new Path();
-      // path.pathData = chengedData;
-      // path.name = item.name;
-      // path.fill = item.fill;
-      // path.stroke = item.stroke;
-      // selection.insertionParent.addChild(path);
+const create = () => {
+  const html = `
+  <style>
+    .numInput {
+      display: inline-block;
+      width: 5em;
     }
+    .text {
+      margin: 0;
+    }
+    input[type="range"] {
+      width: 100%;
+    }
+    .numINput::after {
+      content: "%";
+      display: block;
+      
+    }
+    label {
+      width: 100%;
+    }
+  </style>
+  <div class="container">
+    <h2>Transform Value</h2>
+    <label>
+      <input id="numInput" class="numInput" type="number" name="numInput" min="0" max="100" step="1" value="20">
+      <span class="text">%</span>
+      <input id="slider" class="slider" type="range" min="0" max="100" value="20" />
+    </label>
+  </div>
+  <button class="trans-button" id="run">RUN</button>
+  `;
+
+  panel = document.createElement("div");
+  panel.innerHTML = html;
+  
+  // slider -> numInput
+  panel.querySelector('#slider').addEventListener("input", () => {
+    const target = panel.querySelector('#numInput');
+    let result = Math.round(panel.querySelector('#slider').value);
+    target.value = result;
+  });
+
+  // numInput -> slider
+  panel.querySelector('#numInput').addEventListener("input", () => {
+    const thisInput = panel.querySelector('#numInput');
+    const target = panel.querySelector('#slider');
+    if (thisInput.value > 100) {
+      thisInput.value = 100;
+    } else if( thisInput.value < 0) {
+      thisInput.value = 0;
+    } else {
+      thisInput.value = Math.round(thisInput.value);
+    }
+    let result = Math.round(panel.querySelector('#numInput').value);
+    target.value = result;
+  });
+
+  // 実行
+  panel.querySelector("#run").addEventListener("click", softFn);
+
+  return panel;
+};
+
+
+const softFn = () => {
+  editDocument((selection) => {
+
+    commands.convertToPath();
+
+    selection.items.forEach((item) => {
+      //   [0] "m",  "mx",   "my",
+      //   [3] "c1", "c1x1", "c1y1", "c1x2", "c1y2", "c1x", "c1y",
+      //   [10]"c2", "c2x1", "c2y1", "c2x2", "c2y2", "c2x", "c2y",
+      //   [17]"c3", "c3x1", "c3y1", "c3x2", "c3y2", "c3x", "c3y",
+      //   [24]"c4", "c4x1", "c4y1", "c4x2", "c4y2", "c4x", "c4y",
+      //   [31]"z"
+      const splitData = item.pathData.split(" ");
+      if (
+        splitData[3] == "C" &&
+        splitData[10] == "C" &&
+        splitData[17] == "C" &&
+        splitData[24] == "C" &&
+        splitData[31] == "Z"
+      ) {
+        // splitDataの値の型をNumberに変換
+        for (let i = 0; i < splitData.length; i++) {
+          if (!splitData[i].match(/[A-Z]/)) {
+            splitData[i] = Number(splitData[i]);
+          }
+        }
+
+        // type2 もとのパスデータの数値をmin,図形の幅をmaxとして計算
+        const rateOfChange = Math.round(panel.querySelector('#slider').value) * 0.01;
+        splitData[27] = splitData[27] - splitData[27] * rateOfChange;
+        splitData[4] =
+          splitData[4] + (item.localBounds.width - splitData[4]) * rateOfChange;
+        splitData[13] =
+          splitData[13] +
+          (item.localBounds.width - splitData[13]) * rateOfChange;
+        splitData[18] = splitData[18] - splitData[18] * rateOfChange;
+        splitData[7] = splitData[7] - splitData[7] * rateOfChange;
+        splitData[12] =
+          splitData[12] +
+          (item.localBounds.height - splitData[12]) * rateOfChange;
+        splitData[21] =
+          splitData[21] +
+          (item.localBounds.height - splitData[21]) * rateOfChange;
+        splitData[26] = splitData[26] - splitData[26] * rateOfChange;
+
+        // type1 widthを基準に計算0はハンドルが反転して変な形、0.5で菱形0.8がちょうどいいくらい
+        // const rateOfChange = 0.8;
+        // const leftHorizontal = item.localBounds.width - item.localBounds.width * rateOfChange;
+        // const rightHorizontal = item.localBounds.width * rateOfChange;
+        // const topVertical = item.localBounds.height - item.localBounds.height * rateOfChange;
+        // const bottomVertical = item.localBounds.height * rateOfChange;
+        // splitData[27] = leftHorizontal;
+        // splitData[4] = rightHorizontal;
+        // splitData[13] = rightHorizontal;
+        // splitData[18] = leftHorizontal;
+        // splitData[7] = topVertical;
+        // splitData[12] = bottomVertical;
+        // splitData[21] = bottomVertical;
+        // splitData[26] = topVertical;
+
+        const chengedData = splitData.join(" ");
+
+        item.pathData = chengedData;
+      }
+    });
   });
 };
 
-// [6]
+const show = (event) => {
+  if (!panel) event.node.appendChild(create());
+};
+
 module.exports = {
-  commands: {
-    softellipse: softFn,
+  panels: {
+    softellipse: {
+      show,
+    },
   },
 };
