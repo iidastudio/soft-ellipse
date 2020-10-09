@@ -39,20 +39,21 @@ const create = () => {
       <input id="slider" class="slider" type="range" min="0" max="100" value="20" />
     </label>
   </div>
-  <button class="trans-button" id="run">RUN</button>
+  <button id="run">RUN</button>
+  <button id="reEllipse">楕円に戻す</button>
   `;
 
   panel = document.createElement("div");
   panel.innerHTML = html;
   
-  // slider -> numInput
+  // slider から numInput へ数値の反映
   panel.querySelector('#slider').addEventListener("input", () => {
     const target = panel.querySelector('#numInput');
     let result = Math.round(panel.querySelector('#slider').value);
     target.value = result;
   });
 
-  // numInput -> slider
+  // numInput から slider へ数値の反映
   panel.querySelector('#numInput').addEventListener("input", () => {
     const thisInput = panel.querySelector('#numInput');
     const target = panel.querySelector('#slider');
@@ -69,10 +70,37 @@ const create = () => {
 
   // 実行
   panel.querySelector("#run").addEventListener("click", softFn);
-
+  panel.querySelector("#reEllipse").addEventListener("click", reEllipse);
+  // スライダーバーと数値入力で実行
+  panel.querySelector("#slider").addEventListener("input", softFn);
+  panel.querySelector("#numInput").addEventListener("input", softFn);
   return panel;
 };
 
+const reEllipse = () => {
+  editDocument((selection) => {
+    selection.items.forEach((item) => {
+      const ellipse = new Ellipse();
+      ellipse.name = item.name;
+      ellipse.radiusX = item.localBounds.width/2;
+      ellipse.radiusY = item.localBounds.height/2;
+      ellipse.fillEnabled = item.fillEnabled;
+      ellipse.fill = item.fill;
+      ellipse.strokeEnabled = item.strokeEnabled;
+      ellipse.stroke = item.stroke;
+      ellipse.strokeWidth = item.strokeWidth;
+      ellipse.strokePosition = item.strokePosition;
+      ellipse.strokeJoins = item.strokeJoins;
+      ellipse.strokeDashArray = item.strokeDashArray;
+      ellipse.strokeDashOffset = item.strokeDashOffset;
+      ellipse.shadow = item.shadow;
+      ellipse.blur = item.blur;
+      ellipse.translation = { x:item.boundsInParent.x, y:item.boundsInParent.y}
+      selection.insertionParent.addChild(ellipse);
+      item.removeFromParent();
+    });
+  });
+}
 
 const softFn = () => {
   editDocument((selection) => {
@@ -101,26 +129,28 @@ const softFn = () => {
           }
         }
 
+        
+        // console.log(4/3*Math.tan(Math.PI/2/4)*item.localBounds.width/2);
         // type2 もとのパスデータの数値をmin,図形の幅をmaxとして計算
-        const rateOfChange = Math.round(panel.querySelector('#slider').value) * 0.01;
-        splitData[27] = splitData[27] - splitData[27] * rateOfChange;
-        splitData[4] =
-          splitData[4] + (item.localBounds.width - splitData[4]) * rateOfChange;
-        splitData[13] =
-          splitData[13] +
-          (item.localBounds.width - splitData[13]) * rateOfChange;
-        splitData[18] = splitData[18] - splitData[18] * rateOfChange;
-        splitData[7] = splitData[7] - splitData[7] * rateOfChange;
-        splitData[12] =
-          splitData[12] +
-          (item.localBounds.height - splitData[12]) * rateOfChange;
-        splitData[21] =
-          splitData[21] +
-          (item.localBounds.height - splitData[21]) * rateOfChange;
-        splitData[26] = splitData[26] - splitData[26] * rateOfChange;
+        // const rateOfChange = Math.round(panel.querySelector('#slider').value) * 0.01;
+        // splitData[27] = splitData[27] - splitData[27] * rateOfChange;
+        // splitData[4] =
+        //   splitData[4] + (item.localBounds.width - splitData[4]) * rateOfChange;
+        // splitData[13] =
+        //   splitData[13] +
+        //   (item.localBounds.width - splitData[13]) * rateOfChange;
+        // splitData[18] = splitData[18] - splitData[18] * rateOfChange;
+        // splitData[7] = splitData[7] - splitData[7] * rateOfChange;
+        // splitData[12] =
+        //   splitData[12] +
+        //   (item.localBounds.height - splitData[12]) * rateOfChange;
+        // splitData[21] =
+        //   splitData[21] +
+        //   (item.localBounds.height - splitData[21]) * rateOfChange;
+        // splitData[26] = splitData[26] - splitData[26] * rateOfChange;
 
         // type1 widthを基準に計算0はハンドルが反転して変な形、0.5で菱形0.8がちょうどいいくらい
-        // const rateOfChange = 0.8;
+        // const rateOfChange = Math.round(panel.querySelector('#slider').value) * 0.01;
         // const leftHorizontal = item.localBounds.width - item.localBounds.width * rateOfChange;
         // const rightHorizontal = item.localBounds.width * rateOfChange;
         // const topVertical = item.localBounds.height - item.localBounds.height * rateOfChange;
@@ -133,6 +163,25 @@ const softFn = () => {
         // splitData[12] = bottomVertical;
         // splitData[21] = bottomVertical;
         // splitData[26] = topVertical;
+
+        
+        // type3
+        const rateOfChange = Math.round(panel.querySelector('#slider').value) * 0.01;
+        const bezierCurve = 4/3*(Math.sqrt(2)-1);
+        const widthPointLength =  item.localBounds.width/2 + bezierCurve * item.localBounds.width/2;
+        const widthPointRemainder = item.localBounds.width/2 - bezierCurve * item.localBounds.width/2;
+        const heightPointLength =  item.localBounds.height/2 + bezierCurve * item.localBounds.height/2;
+        const heightPointRemainder = item.localBounds.height/2 - bezierCurve * item.localBounds.height/2;
+
+        // console.log(item.localBounds.width + 4/3*(Math.sqrt(2)-1)*item.localBounds.width/2 * rateOfChange);
+        splitData[27] = item.localBounds.width - (widthPointLength + widthPointRemainder * rateOfChange);
+        splitData[4] =  widthPointLength + widthPointRemainder * rateOfChange;
+        splitData[13] = widthPointLength + widthPointRemainder * rateOfChange;
+        splitData[18] = item.localBounds.width - (widthPointLength + widthPointRemainder * rateOfChange);
+        splitData[7] =  item.localBounds.height - (heightPointLength + heightPointRemainder * rateOfChange);
+        splitData[12] = heightPointLength + heightPointRemainder * rateOfChange;
+        splitData[21] = heightPointLength + heightPointRemainder * rateOfChange;
+        splitData[26] = item.localBounds.height - (heightPointLength + heightPointRemainder * rateOfChange);
 
         const chengedData = splitData.join(" ");
 
