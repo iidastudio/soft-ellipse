@@ -1,4 +1,4 @@
-const { Ellipse, Rectangle } = require("scenegraph");
+const { selection, Ellipse, Rectangle } = require("scenegraph");
 const { editDocument, appLanguage } = require("application");
 const commands = require("commands");
 // const strings = require("./strings.json");
@@ -8,82 +8,152 @@ const commands = require("commands");
 //     : supportedLanguages[0];
 
 let panel;
+let numInput;
+let slider;
 
 const create = () => {
   const html = `
   <style>
-    .numInput {
-      display: inline-block;
-      width: 5em;
-    }
-    .text {
-      margin: 0;
-    }
-    input[type="range"] {
-      width: 100%;
-    }
-    .numINput::after {
-      content: "%";
-      display: block;
-      
-    }
-    label {
-      width: 100%;
-    }
-  </style>
-  <div class="container">
-    <h2>Transform Value</h2>
-    <label>
-      <input id="numInput" class="numInput" type="number" name="numInput" min="0" max="100" step="1" value="20">
-      <span class="text">%</span>
-      <input id="slider" class="slider" type="range" min="0" max="100" value="20" />
-    </label>
-  </div>
-  <button id="run">RUN</button>
-  <button id="reEllipse">楕円に戻す</button>
+  .numInput {
+    display: inline-block;
+    width: 5em;
+  }
+  .text {
+    margin: 0;
+  }
+  input[type="range"] {
+    width: 100%;
+  }
+  .numINput::after {
+    content: "%";
+    display: block;
+    
+  }
+  label {
+    width: 100%;
+  }
+  .numInputUnit {
+    display: flex;
+    align-items: center;
+  }
+  .textUnit {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  hr {
+    margin-top: 10px;
+    margin-bottom: 20px;
+  }
+</style>
+<div class="container">
+  <label>
+    <div class="textUnit">
+      <h2>Transform Value</h2>
+      <div class="numInputUnit">
+        <input id="numInput" class="numInput" type="number" name="numInput" min="0" max="100" step="1" value="0">
+        <span class="text">%</span>
+      </div>
+    </div>
+    <input id="slider" class="slider" type="range" min="0" max="100" value="0" />
+  </label>
+</div>
+<hr />
+<p>Once a shape has been transformed, it becomes a path.
+You can revert to an ellipse by clicking this button.</p>
+<button id="reEllipse">Return to Ellipse</button>
   `;
 
   panel = document.createElement("div");
   panel.innerHTML = html;
-  
+
+  // グローバル変数に要素を指定
+  numInput = panel.querySelector("#numInput");
+  slider = panel.querySelector("#slider");
+
   // slider から numInput へ数値の反映
-  panel.querySelector('#slider').addEventListener("input", () => {
-    const target = panel.querySelector('#numInput');
-    let result = Math.round(panel.querySelector('#slider').value);
-    target.value = result;
+  slider.addEventListener("input", () => {
+    let result = Math.round(slider.value);
+    numInput.value = result;
   });
-
   // numInput から slider へ数値の反映
-  panel.querySelector('#numInput').addEventListener("input", () => {
-    const thisInput = panel.querySelector('#numInput');
-    const target = panel.querySelector('#slider');
-    if (thisInput.value > 100) {
-      thisInput.value = 100;
-    } else if( thisInput.value < 0) {
-      thisInput.value = 0;
+  numInput.addEventListener("input", () => {
+    if (numInput.value > 100) {
+      numInput.value = 100;
+    } else if (numInput.value < 0) {
+      numInput.value = 0;
     } else {
-      thisInput.value = Math.round(thisInput.value);
+      numInput.value = Math.round(numInput.value);
     }
-    let result = Math.round(panel.querySelector('#numInput').value);
-    target.value = result;
+    let result = Math.round(numInput.value);
+    slider.value = result;
   });
 
-  // 実行
-  panel.querySelector("#run").addEventListener("click", softFn);
+  // 数値入力で実行(少数分の移動を間引き)
+  let nowInput = Math.round(numInput.value);
+  numInput.addEventListener("input", () => {
+    if (nowInput !== Math.round(numInput.value)) {
+      softFn();
+      nowInput = Math.round(numInput.value);
+    }
+  });
+  // スライダーバー実行(少数分の移動を間引き)
+  let nowSlider = Math.round(slider.value);
+  slider.addEventListener("input", () => {
+    if (nowSlider !== Math.round(slider.value)) {
+      softFn();
+      nowSlider = Math.round(slider.value);
+    }
+  });
+
+  // 楕円に戻すを実行
   panel.querySelector("#reEllipse").addEventListener("click", reEllipse);
-  // スライダーバーと数値入力で実行
-  panel.querySelector("#slider").addEventListener("input", softFn);
-  panel.querySelector("#numInput").addEventListener("input", softFn);
+
   return panel;
 };
 
+// 逆算処理
+const backCulcFn = () => {
+  selection.items.forEach((item) => {
+    const splitData = item.pathData.split(" ");
+    if (
+      splitData[3] == "C" &&
+      splitData[10] == "C" &&
+      splitData[17] == "C" &&
+      splitData[24] == "C" &&
+      splitData[31] == "Z"
+    ) {
+      // splitDataの値の型をNumberに変換
+      for (let i = 0; i < splitData.length; i++) {
+        if (!splitData[i].match(/[A-Z]/)) {
+          splitData[i] = Number(splitData[i]);
+        }
+      }
+
+      const bezierCurve = (4 / 3) * (Math.sqrt(2) - 1);
+      const widthPointLength =
+        item.localBounds.width / 2 + (bezierCurve * item.localBounds.width) / 2;
+      const widthPointRemainder =
+        item.localBounds.width / 2 - (bezierCurve * item.localBounds.width) / 2;
+
+      const result = Math.round(
+        ((splitData[4] - widthPointLength) / widthPointRemainder) * 100
+      );
+      numInput.value = result;
+      slider.value = result;
+    }
+  });
+};
+
+// 楕円に戻す（プロパティを引き継いだ楕円を作成してもとの図形を削除）
 const reEllipse = () => {
   editDocument((selection) => {
     selection.items.forEach((item) => {
       const ellipse = new Ellipse();
       ellipse.name = item.name;
-      ellipse.radiusX = item.localBounds.width/2;
-      ellipse.radiusY = item.localBounds.height/2;
+      ellipse.radiusX = item.localBounds.width / 2;
+      ellipse.radiusY = item.localBounds.height / 2;
       ellipse.fillEnabled = item.fillEnabled;
       ellipse.fill = item.fill;
       ellipse.strokeEnabled = item.strokeEnabled;
@@ -95,16 +165,19 @@ const reEllipse = () => {
       ellipse.strokeDashOffset = item.strokeDashOffset;
       ellipse.shadow = item.shadow;
       ellipse.blur = item.blur;
-      ellipse.translation = { x:item.boundsInParent.x, y:item.boundsInParent.y}
+      ellipse.translation = {
+        x: item.boundsInParent.x,
+        y: item.boundsInParent.y,
+      };
       selection.insertionParent.addChild(ellipse);
       item.removeFromParent();
     });
   });
-}
+};
 
+// 楕円のパスデータを変更する処理
 const softFn = () => {
   editDocument((selection) => {
-
     commands.convertToPath();
 
     selection.items.forEach((item) => {
@@ -114,7 +187,10 @@ const softFn = () => {
       //   [17]"c3", "c3x1", "c3y1", "c3x2", "c3y2", "c3x", "c3y",
       //   [24]"c4", "c4x1", "c4y1", "c4x2", "c4y2", "c4x", "c4y",
       //   [31]"z"
+
+      // パスデータを配列に格納
       const splitData = item.pathData.split(" ");
+      // 楕円の形状と一致するパスデータかチェック
       if (
         splitData[3] == "C" &&
         splitData[10] == "C" &&
@@ -129,62 +205,35 @@ const softFn = () => {
           }
         }
 
-        
-        // console.log(4/3*Math.tan(Math.PI/2/4)*item.localBounds.width/2);
-        // type2 もとのパスデータの数値をmin,図形の幅をmaxとして計算
-        // const rateOfChange = Math.round(panel.querySelector('#slider').value) * 0.01;
-        // splitData[27] = splitData[27] - splitData[27] * rateOfChange;
-        // splitData[4] =
-        //   splitData[4] + (item.localBounds.width - splitData[4]) * rateOfChange;
-        // splitData[13] =
-        //   splitData[13] +
-        //   (item.localBounds.width - splitData[13]) * rateOfChange;
-        // splitData[18] = splitData[18] - splitData[18] * rateOfChange;
-        // splitData[7] = splitData[7] - splitData[7] * rateOfChange;
-        // splitData[12] =
-        //   splitData[12] +
-        //   (item.localBounds.height - splitData[12]) * rateOfChange;
-        // splitData[21] =
-        //   splitData[21] +
-        //   (item.localBounds.height - splitData[21]) * rateOfChange;
-        // splitData[26] = splitData[26] - splitData[26] * rateOfChange;
+        // 計算式
+        const rateOfChange = Math.round(slider.value) * 0.01;
+        const bezierCurve = (4 / 3) * (Math.sqrt(2) - 1);
+        const widthPointLength = item.localBounds.width / 2 + (bezierCurve * item.localBounds.width) / 2;
+        const widthPointRemainder = item.localBounds.width / 2 - (bezierCurve * item.localBounds.width) / 2;
+        const heightPointLength = item.localBounds.height / 2 + (bezierCurve * item.localBounds.height) / 2;
+        const heightPointRemainder = item.localBounds.height / 2 - (bezierCurve * item.localBounds.height) / 2;
 
-        // type1 widthを基準に計算0はハンドルが反転して変な形、0.5で菱形0.8がちょうどいいくらい
-        // const rateOfChange = Math.round(panel.querySelector('#slider').value) * 0.01;
-        // const leftHorizontal = item.localBounds.width - item.localBounds.width * rateOfChange;
-        // const rightHorizontal = item.localBounds.width * rateOfChange;
-        // const topVertical = item.localBounds.height - item.localBounds.height * rateOfChange;
-        // const bottomVertical = item.localBounds.height * rateOfChange;
-        // splitData[27] = leftHorizontal;
-        // splitData[4] = rightHorizontal;
-        // splitData[13] = rightHorizontal;
-        // splitData[18] = leftHorizontal;
-        // splitData[7] = topVertical;
-        // splitData[12] = bottomVertical;
-        // splitData[21] = bottomVertical;
-        // splitData[26] = topVertical;
-
-        
-        // type3
-        const rateOfChange = Math.round(panel.querySelector('#slider').value) * 0.01;
-        const bezierCurve = 4/3*(Math.sqrt(2)-1);
-        const widthPointLength =  item.localBounds.width/2 + bezierCurve * item.localBounds.width/2;
-        const widthPointRemainder = item.localBounds.width/2 - bezierCurve * item.localBounds.width/2;
-        const heightPointLength =  item.localBounds.height/2 + bezierCurve * item.localBounds.height/2;
-        const heightPointRemainder = item.localBounds.height/2 - bezierCurve * item.localBounds.height/2;
-
-        // console.log(item.localBounds.width + 4/3*(Math.sqrt(2)-1)*item.localBounds.width/2 * rateOfChange);
-        splitData[27] = item.localBounds.width - (widthPointLength + widthPointRemainder * rateOfChange);
-        splitData[4] =  widthPointLength + widthPointRemainder * rateOfChange;
+        splitData[27] =
+          item.localBounds.width -
+          (widthPointLength + widthPointRemainder * rateOfChange);
+        splitData[4] = widthPointLength + widthPointRemainder * rateOfChange;
         splitData[13] = widthPointLength + widthPointRemainder * rateOfChange;
-        splitData[18] = item.localBounds.width - (widthPointLength + widthPointRemainder * rateOfChange);
-        splitData[7] =  item.localBounds.height - (heightPointLength + heightPointRemainder * rateOfChange);
+        splitData[18] =
+          item.localBounds.width -
+          (widthPointLength + widthPointRemainder * rateOfChange);
+        splitData[7] =
+          item.localBounds.height -
+          (heightPointLength + heightPointRemainder * rateOfChange);
         splitData[12] = heightPointLength + heightPointRemainder * rateOfChange;
         splitData[21] = heightPointLength + heightPointRemainder * rateOfChange;
-        splitData[26] = item.localBounds.height - (heightPointLength + heightPointRemainder * rateOfChange);
+        splitData[26] =
+          item.localBounds.height -
+          (heightPointLength + heightPointRemainder * rateOfChange);
 
+        // 計算して変化させた配列を１つのパスデータにする
         const chengedData = splitData.join(" ");
 
+        // 変化させたパスデータを代入
         item.pathData = chengedData;
       }
     });
@@ -195,10 +244,15 @@ const show = (event) => {
   if (!panel) event.node.appendChild(create());
 };
 
+const update = () => {
+    backCulcFn();
+};
+
 module.exports = {
   panels: {
     softellipse: {
       show,
+      update,
     },
   },
 };
