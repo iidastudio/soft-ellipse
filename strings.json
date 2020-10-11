@@ -1,0 +1,12 @@
+{
+  "en": {
+    "transformValue": "Transform Value",
+    "notice": "Once a shape has been transformed, it becomes a path. You can revert to an ellipse by clicking this button.",
+    "returnToEllipse": "Return to Ellipse"
+  },
+  "ja": {
+    "transformValue": "変化値",
+    "notice": "一度でも変化させると楕円（シェイプ）はパスになります。下記のボタンをクリックすると楕円に戻すことができます。",
+    "returnToEllipse": "楕円に戻す"
+  }
+}

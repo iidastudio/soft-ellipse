@@ -1,11 +1,11 @@
 const { selection, Ellipse, Rectangle } = require("scenegraph");
 const { editDocument, appLanguage } = require("application");
 const commands = require("commands");
-// const strings = require("./strings.json");
-// const supportedLanguages = require("./manifest.json").languages;
-// const uiLang = supportedLanguages.includes(appLanguage)
-//     ? appLanguage
-//     : supportedLanguages[0];
+const strings = require("./strings.json");
+const supportedLanguages = require("./manifest.json").languages;
+const uiLang = supportedLanguages.includes(appLanguage)
+    ? appLanguage
+    : supportedLanguages[0];
 
 let panel;
 let numInput;
@@ -50,7 +50,7 @@ const create = () => {
 <div class="container">
   <label>
     <div class="textUnit">
-      <h2>Transform Value</h2>
+      <h2>${strings[uiLang].transformValue}</h2>
       <div class="numInputUnit">
         <input id="numInput" class="numInput" type="number" name="numInput" min="0" max="100" step="1" value="0">
         <span class="text">%</span>
@@ -60,9 +60,8 @@ const create = () => {
   </label>
 </div>
 <hr />
-<p>Once a shape has been transformed, it becomes a path.
-You can revert to an ellipse by clicking this button.</p>
-<button id="reEllipse">Return to Ellipse</button>
+<p>${strings[uiLang].notice}</p>
+<button id="reEllipse">${strings[uiLang].returnToEllipse}</button>
   `;
 
   panel = document.createElement("div");
@@ -150,27 +149,36 @@ const backCulcFn = () => {
 const reEllipse = () => {
   editDocument((selection) => {
     selection.items.forEach((item) => {
-      const ellipse = new Ellipse();
-      ellipse.name = item.name;
-      ellipse.radiusX = item.localBounds.width / 2;
-      ellipse.radiusY = item.localBounds.height / 2;
-      ellipse.fillEnabled = item.fillEnabled;
-      ellipse.fill = item.fill;
-      ellipse.strokeEnabled = item.strokeEnabled;
-      ellipse.stroke = item.stroke;
-      ellipse.strokeWidth = item.strokeWidth;
-      ellipse.strokePosition = item.strokePosition;
-      ellipse.strokeJoins = item.strokeJoins;
-      ellipse.strokeDashArray = item.strokeDashArray;
-      ellipse.strokeDashOffset = item.strokeDashOffset;
-      ellipse.shadow = item.shadow;
-      ellipse.blur = item.blur;
-      ellipse.translation = {
-        x: item.boundsInParent.x,
-        y: item.boundsInParent.y,
-      };
-      selection.insertionParent.addChild(ellipse);
-      item.removeFromParent();
+      const splitData = item.pathData.split(" ");
+      if (
+        splitData[3] == "C" &&
+        splitData[10] == "C" &&
+        splitData[17] == "C" &&
+        splitData[24] == "C" &&
+        splitData[31] == "Z"
+      ) {
+        const ellipse = new Ellipse();
+        ellipse.name = item.name;
+        ellipse.radiusX = item.localBounds.width / 2;
+        ellipse.radiusY = item.localBounds.height / 2;
+        ellipse.fillEnabled = item.fillEnabled;
+        ellipse.fill = item.fill;
+        ellipse.strokeEnabled = item.strokeEnabled;
+        ellipse.stroke = item.stroke;
+        ellipse.strokeWidth = item.strokeWidth;
+        ellipse.strokePosition = item.strokePosition;
+        ellipse.strokeJoins = item.strokeJoins;
+        ellipse.strokeDashArray = item.strokeDashArray;
+        ellipse.strokeDashOffset = item.strokeDashOffset;
+        ellipse.shadow = item.shadow;
+        ellipse.blur = item.blur;
+        ellipse.translation = {
+          x: item.boundsInParent.x,
+          y: item.boundsInParent.y,
+        };
+        selection.insertionParent.addChild(ellipse);
+        item.removeFromParent();
+      }
     });
   });
 };
@@ -245,7 +253,7 @@ const show = (event) => {
 };
 
 const update = () => {
-    backCulcFn();
+  backCulcFn();
 };
 
 module.exports = {
