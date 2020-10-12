@@ -1,4 +1,4 @@
-const { selection, Ellipse, Rectangle } = require("scenegraph");
+const { selection, Ellipse } = require("scenegraph");
 const { editDocument, appLanguage } = require("application");
 const commands = require("commands");
 const strings = require("./strings.json");
@@ -112,43 +112,12 @@ const create = () => {
   return panel;
 };
 
-// 逆算処理
+// 逆算関数
 const backCulcFn = () => {
   selection.items.forEach((item) => {
-    const splitData = item.pathData.split(" ");
-    if (
-      splitData[3] == "C" &&
-      splitData[10] == "C" &&
-      splitData[17] == "C" &&
-      splitData[24] == "C" &&
-      splitData[31] == "Z"
-    ) {
-      // splitDataの値の型をNumberに変換
-      for (let i = 0; i < splitData.length; i++) {
-        if (!splitData[i].match(/[A-Z]/)) {
-          splitData[i] = Number(splitData[i]);
-        }
-      }
 
-      const bezierCurve = (4 / 3) * (Math.sqrt(2) - 1);
-      const widthPointLength =
-        item.localBounds.width / 2 + (bezierCurve * item.localBounds.width) / 2;
-      const widthPointRemainder =
-        item.localBounds.width / 2 - (bezierCurve * item.localBounds.width) / 2;
-
-      const result = Math.round(
-        ((splitData[4] - widthPointLength) / widthPointRemainder) * 100
-      );
-      numInput.value = result;
-      slider.value = result;
-    }
-  });
-};
-
-// 楕円に戻す（プロパティを引き継いだ楕円を作成してもとの図形を削除）
-const reEllipse = () => {
-  editDocument((selection) => {
-    selection.items.forEach((item) => {
+    // 選択されたアイテムが楕円かそれに準ずるパスかどうか判定
+    if ( item.constructor.name === "Ellipse" || item.constructor.name === "Path" ) {
       const splitData = item.pathData.split(" ");
       if (
         splitData[3] == "C" &&
@@ -157,27 +126,64 @@ const reEllipse = () => {
         splitData[24] == "C" &&
         splitData[31] == "Z"
       ) {
-        const ellipse = new Ellipse();
-        ellipse.name = item.name;
-        ellipse.radiusX = item.localBounds.width / 2;
-        ellipse.radiusY = item.localBounds.height / 2;
-        ellipse.fillEnabled = item.fillEnabled;
-        ellipse.fill = item.fill;
-        ellipse.strokeEnabled = item.strokeEnabled;
-        ellipse.stroke = item.stroke;
-        ellipse.strokeWidth = item.strokeWidth;
-        ellipse.strokePosition = item.strokePosition;
-        ellipse.strokeJoins = item.strokeJoins;
-        ellipse.strokeDashArray = item.strokeDashArray;
-        ellipse.strokeDashOffset = item.strokeDashOffset;
-        ellipse.shadow = item.shadow;
-        ellipse.blur = item.blur;
-        ellipse.translation = {
-          x: item.boundsInParent.x,
-          y: item.boundsInParent.y,
-        };
-        selection.insertionParent.addChild(ellipse);
-        item.removeFromParent();
+        // splitDataの値の型をNumberに変換
+        for (let i = 0; i < splitData.length; i++) {
+          if (!splitData[i].match(/[A-Z]/)) {
+            splitData[i] = Number(splitData[i]);
+          }
+        }
+
+        const bezierCurve = (4 / 3) * (Math.sqrt(2) - 1);
+        const widthPointLength =
+          item.localBounds.width / 2 + (bezierCurve * item.localBounds.width) / 2;
+        const widthPointRemainder =
+          item.localBounds.width / 2 - (bezierCurve * item.localBounds.width) / 2;
+
+        const result = Math.round(
+          ((splitData[4] - widthPointLength) / widthPointRemainder) * 100
+        );
+        numInput.value = result;
+        slider.value = result;
+      }
+    }
+  });
+};
+
+// 楕円に戻す（プロパティを引き継いだ楕円を作成してもとの図形を削除）
+const reEllipse = () => {
+  editDocument((selection) => {
+    selection.items.forEach((item) => {
+      if ( item.constructor.name === "Ellipse" || item.constructor.name === "Path" ) {
+        const splitData = item.pathData.split(" ");
+        if (
+          splitData[3] == "C" &&
+          splitData[10] == "C" &&
+          splitData[17] == "C" &&
+          splitData[24] == "C" &&
+          splitData[31] == "Z"
+        ) {
+          const ellipse = new Ellipse();
+          ellipse.name = item.name;
+          ellipse.radiusX = item.localBounds.width / 2;
+          ellipse.radiusY = item.localBounds.height / 2;
+          ellipse.fillEnabled = item.fillEnabled;
+          ellipse.fill = item.fill;
+          ellipse.strokeEnabled = item.strokeEnabled;
+          ellipse.stroke = item.stroke;
+          ellipse.strokeWidth = item.strokeWidth;
+          ellipse.strokePosition = item.strokePosition;
+          ellipse.strokeJoins = item.strokeJoins;
+          ellipse.strokeDashArray = item.strokeDashArray;
+          ellipse.strokeDashOffset = item.strokeDashOffset;
+          ellipse.shadow = item.shadow;
+          ellipse.blur = item.blur;
+          ellipse.translation = {
+            x: item.boundsInParent.x,
+            y: item.boundsInParent.y,
+          };
+          selection.insertionParent.addChild(ellipse);
+          item.removeFromParent();
+        }
       }
     });
   });
@@ -186,6 +192,22 @@ const reEllipse = () => {
 // 楕円のパスデータを変更する処理
 const softFn = () => {
   editDocument((selection) => {
+
+    const reSelection = selection.items.filter((item) => {
+      if ( item.constructor.name === "Ellipse" || item.constructor.name === "Path" ) {
+        const splitData = item.pathData.split(" ");
+        if (
+          splitData[3] == "C" &&
+          splitData[10] == "C" &&
+          splitData[17] == "C" &&
+          splitData[24] == "C" &&
+          splitData[31] == "Z"
+        ) {
+        return item;
+        }
+      }
+    });
+    selection.items = reSelection;
     commands.convertToPath();
 
     selection.items.forEach((item) => {
@@ -198,14 +220,6 @@ const softFn = () => {
 
       // パスデータを配列に格納
       const splitData = item.pathData.split(" ");
-      // 楕円の形状と一致するパスデータかチェック
-      if (
-        splitData[3] == "C" &&
-        splitData[10] == "C" &&
-        splitData[17] == "C" &&
-        splitData[24] == "C" &&
-        splitData[31] == "Z"
-      ) {
         // splitDataの値の型をNumberに変換
         for (let i = 0; i < splitData.length; i++) {
           if (!splitData[i].match(/[A-Z]/)) {
@@ -243,7 +257,6 @@ const softFn = () => {
 
         // 変化させたパスデータを代入
         item.pathData = chengedData;
-      }
     });
   });
 };
