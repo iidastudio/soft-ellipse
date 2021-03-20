@@ -1,4 +1,4 @@
-const { selection, Ellipse } = require("scenegraph");
+const { Ellipse } = require("scenegraph");
 const { editDocument, appLanguage } = require("application");
 const commands = require("commands");
 const strings = require("./strings.json");
@@ -113,8 +113,8 @@ const create = () => {
 };
 
 // 逆算関数
-const backCulcFn = () => {
-  selection.items.forEach((item) => {
+const backCulcFn = (argSelection) => {
+  argSelection.items.forEach((item) => {
 
     // 選択されたアイテムが楕円かそれに準ずるパスかどうか判定
     if ( item.constructor.name === "Ellipse" || item.constructor.name === "Path" ) {
@@ -265,8 +265,8 @@ const show = (event) => {
   if (!panel) event.node.appendChild(create());
 };
 
-const update = () => {
-  backCulcFn();
+const update = (selection) => {
+  backCulcFn(selection);
 };
 
 module.exports = {
