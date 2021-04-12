@@ -271,7 +271,7 @@ const update = (selection) => {
 
 module.exports = {
   panels: {
-    softellipse: {
+    superellipse: {
       show,
       update,
     },

@@ -1,6 +1,6 @@
 {
   "id": "374dfase",
-  "name": "Soft Ellipse",
+  "name": "Super Ellipse",
   "version": "1.0.0",
   "description": "Description of your plugin.",
   "summary": "Summary of your plugin",
@@ -20,8 +20,8 @@
   "uiEntryPoints": [
     {
       "type": "panel",
-      "label": "Soft Ellipse",
-      "panelId": "softellipse"
+      "label": "Super Ellipse",
+      "panelId": "superellipse"
     }
   ]
 }
