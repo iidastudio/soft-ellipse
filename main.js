@@ -46,7 +46,17 @@ const create = () => {
     margin-top: 10px;
     margin-bottom: 20px;
   }
+  .is-warning form,
+  .warning-text {
+    display: none;
+  }
+  .is-warning .warning-text {
+    display: block;
+  }
 </style>
+<div class="wrapper">
+<p class="warning-text">${strings[uiLang].warningText}</p>
+<form method="panel">
 <div class="container">
   <label>
     <div class="textUnit">
@@ -62,6 +72,8 @@ const create = () => {
 <hr />
 <p>${strings[uiLang].notice}</p>
 <button id="reEllipse">${strings[uiLang].returnToEllipse}</button>
+</form>
+</div>
   `;
 
   panel = document.createElement("div");
@@ -117,34 +129,27 @@ const backCulcFn = (argSelection) => {
   argSelection.items.forEach((item) => {
 
     // 選択されたアイテムが楕円かそれに準ずるパスかどうか判定
-    if ( item.constructor.name === "Ellipse" || item.constructor.name === "Path" ) {
+    let match_ellipse_flg = check_object_match_ellipse(item);
+    if ( match_ellipse_flg ) {
       const splitData = item.pathData.split(" ");
-      if (
-        splitData[3] == "C" &&
-        splitData[10] == "C" &&
-        splitData[17] == "C" &&
-        splitData[24] == "C" &&
-        splitData[31] == "Z"
-      ) {
-        // splitDataの値の型をNumberに変換
-        for (let i = 0; i < splitData.length; i++) {
-          if (!splitData[i].match(/[A-Z]/)) {
-            splitData[i] = Number(splitData[i]);
-          }
+      // splitDataの値の型をNumberに変換
+      for (let i = 0; i < splitData.length; i++) {
+        if (!splitData[i].match(/[A-Z]/)) {
+          splitData[i] = Number(splitData[i]);
         }
-
-        const bezierCurve = (4 / 3) * (Math.sqrt(2) - 1);
-        const widthPointLength =
-          item.localBounds.width / 2 + (bezierCurve * item.localBounds.width) / 2;
-        const widthPointRemainder =
-          item.localBounds.width / 2 - (bezierCurve * item.localBounds.width) / 2;
-
-        const result = Math.round(
-          ((splitData[4] - widthPointLength) / widthPointRemainder) * 100
-        );
-        numInput.value = result;
-        slider.value = result;
       }
+
+      const bezierCurve = (4 / 3) * (Math.sqrt(2) - 1);
+      const widthPointLength =
+        item.localBounds.width / 2 + (bezierCurve * item.localBounds.width) / 2;
+      const widthPointRemainder =
+        item.localBounds.width / 2 - (bezierCurve * item.localBounds.width) / 2;
+
+      const result = Math.round(
+        ((splitData[4] - widthPointLength) / widthPointRemainder) * 100
+      );
+      numInput.value = result;
+      slider.value = result;
     }
   });
 };
@@ -153,37 +158,29 @@ const backCulcFn = (argSelection) => {
 const reEllipse = () => {
   editDocument((selection) => {
     selection.items.forEach((item) => {
-      if ( item.constructor.name === "Ellipse" || item.constructor.name === "Path" ) {
-        const splitData = item.pathData.split(" ");
-        if (
-          splitData[3] == "C" &&
-          splitData[10] == "C" &&
-          splitData[17] == "C" &&
-          splitData[24] == "C" &&
-          splitData[31] == "Z"
-        ) {
-          const ellipse = new Ellipse();
-          ellipse.name = item.name;
-          ellipse.radiusX = item.localBounds.width / 2;
-          ellipse.radiusY = item.localBounds.height / 2;
-          ellipse.fillEnabled = item.fillEnabled;
-          ellipse.fill = item.fill;
-          ellipse.strokeEnabled = item.strokeEnabled;
-          ellipse.stroke = item.stroke;
-          ellipse.strokeWidth = item.strokeWidth;
-          ellipse.strokePosition = item.strokePosition;
-          ellipse.strokeJoins = item.strokeJoins;
-          ellipse.strokeDashArray = item.strokeDashArray;
-          ellipse.strokeDashOffset = item.strokeDashOffset;
-          ellipse.shadow = item.shadow;
-          ellipse.blur = item.blur;
-          ellipse.translation = {
-            x: item.boundsInParent.x,
-            y: item.boundsInParent.y,
-          };
-          selection.insertionParent.addChild(ellipse);
-          item.removeFromParent();
-        }
+      let match_ellipse_flg = check_object_match_ellipse(item);
+      if ( match_ellipse_flg ) {
+        const ellipse = new Ellipse();
+        ellipse.name = item.name;
+        ellipse.radiusX = item.localBounds.width / 2;
+        ellipse.radiusY = item.localBounds.height / 2;
+        ellipse.fillEnabled = item.fillEnabled;
+        ellipse.fill = item.fill;
+        ellipse.strokeEnabled = item.strokeEnabled;
+        ellipse.stroke = item.stroke;
+        ellipse.strokeWidth = item.strokeWidth;
+        ellipse.strokePosition = item.strokePosition;
+        ellipse.strokeJoins = item.strokeJoins;
+        ellipse.strokeDashArray = item.strokeDashArray;
+        ellipse.strokeDashOffset = item.strokeDashOffset;
+        ellipse.shadow = item.shadow;
+        ellipse.blur = item.blur;
+        ellipse.translation = {
+          x: item.boundsInParent.x,
+          y: item.boundsInParent.y,
+        };
+        selection.insertionParent.addChild(ellipse);
+        item.removeFromParent();
       }
     });
   });
@@ -194,17 +191,9 @@ const softFn = () => {
   editDocument((selection) => {
 
     const reSelection = selection.items.filter((item) => {
-      if ( item.constructor.name === "Ellipse" || item.constructor.name === "Path" ) {
-        const splitData = item.pathData.split(" ");
-        if (
-          splitData[3] == "C" &&
-          splitData[10] == "C" &&
-          splitData[17] == "C" &&
-          splitData[24] == "C" &&
-          splitData[31] == "Z"
-        ) {
+      let match_ellipse_flg = check_object_match_ellipse(item);
+      if ( match_ellipse_flg ) {
         return item;
-        }
       }
     });
     selection.items = reSelection;
@@ -261,12 +250,63 @@ const softFn = () => {
   });
 };
 
+// 選択したオブジェクトが"すべて楕円か"or"１つ以上の楕円か"or"全部楕円じゃないか"の判定
+const check_select_objects = (argSelection) => {
+  let check_array = [];
+  let check_flg = "";
+  argSelection.items.forEach((item) => {
+    let match_ellipse_flg = check_object_match_ellipse(item);
+    if ( match_ellipse_flg ) {
+        check_array.push("ellipse");
+    } else {
+        check_array.push("other");
+    }
+  });
+  if(check_array.every( value => value === "ellipse" )) {
+    check_flg = "every_ellipse";
+  } else if(check_array.some( value => value === "ellipse") ){
+    check_flg = "some_ellipse";
+  } else{
+    check_flg = "not_ellipse";
+  }
+  return check_flg;
+}
+
+// 選択されたオブジェクトそれぞれが楕円または楕円と同じ構造のパスかどうか判定
+const check_object_match_ellipse = (item) => {
+    let match_ellipse_flg = "";
+    if ( item.constructor.name === "Ellipse" || item.constructor.name === "Path" ) {
+      const splitData = item.pathData.split(" ");
+      if (
+        splitData[3] == "C" &&
+        splitData[10] == "C" &&
+        splitData[17] == "C" &&
+        splitData[24] == "C" &&
+        splitData[31] == "Z"
+      ){
+        match_ellipse_flg = true;
+      } else {
+        match_ellipse_flg = false;
+      }
+    } else {
+      match_ellipse_flg = false;
+    }
+    return match_ellipse_flg;
+}
+
 const show = (event) => {
   if (!panel) event.node.appendChild(create());
 };
 
 const update = (selection) => {
-  backCulcFn(selection);
+  let check_flg = check_select_objects(selection);
+  const wrapper = document.querySelector(".wrapper");
+  if(selection.items.length === 0 || check_flg === "not_ellipse" ) {
+    wrapper.classList.add("is-warning");
+  } else if(check_flg === "every_ellipse" || check_flg === "some_ellipse" ) {
+    wrapper.classList.remove("is-warning");
+    backCulcFn(selection);
+  }
 };
 
 module.exports = {
