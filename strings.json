@@ -1,10 +1,12 @@
 {
   "en": {
+    "warningText": "Please select one or more ellipses or paths with the same structure as the ellipse.",
     "transformValue": "Transform Value",
     "notice": "Once a shape has been transformed, it becomes a path. You can revert to an ellipse by clicking this button.",
     "returnToEllipse": "Return to Ellipse"
   },
   "ja": {
+    "warningText": "一つ以上の楕円または楕円と同じ構造のパスを選択してください。",
     "transformValue": "変化値",
     "notice": "一度でも変化させると楕円（シェイプ）はパスになります。下記のボタンをクリックすると楕円に戻すことができます。",
     "returnToEllipse": "楕円に戻す"
