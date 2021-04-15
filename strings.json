@@ -1,6 +1,6 @@
 {
   "en": {
-    "warningText": "Please select one or more ellipses or paths with the same structure as the ellipse.",
+    "warningText": "Please select one or more ellipses or paths with the same structure as the ellipses.",
     "transformValue": "Transform Value",
     "notice": "Once a shape has been transformed, it becomes a path. You can revert to an ellipse by clicking this button.",
     "returnToEllipse": "Return to Ellipse"
